@@ -1,0 +1,130 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-spring4-4.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <title>热力图</title>
+    <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css"/>
+    <style>
+        html,
+        body,
+        #container {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+
+<!-- <h1>整合高德地图完成实时热力图展示</h1> -->
+<h1 style="text-align: center">基于Storm的实时区域游客量热力图统计</h1>
+<div style="text-align: center">
+    <h1 style="display: inline;">刷新频率：</h1>
+    <div style="display: inline-block">
+        <select class="sel-btn" style="display: inline-block">
+            <option>30秒</option>
+            <option>60秒</option>
+            <option>90秒</option>
+        </select>
+    </div>
+
+
+</div>
+
+
+<div id="container"></div>
+<div class="input-card" style="width: auto;">
+    <div class="input-item">
+        <button class="btn" onclick="heatmap.show()">显示热力图</button>
+    </div>
+    <div class="input-item">
+        <button class="btn" onclick="heatmap.hide()">关闭热力图</button>
+    </div>
+</div>
+<script src="//webapi.amap.com/maps?v=1.4.15&key=d6be9eaa0a75c34187c6fe9b864eab56"></script>
+<script src="//a.amap.com/jsapi_demos/static/resource/heatmapData.js"></script>
+
+<!--    1、js的 <script type="text/javascript"> 替换成 <script th:inline="javascript">-->
+
+<script th:inline="javascript">
+    var map = new AMap.Map("container", {
+        resizeEnable: true,
+        center: [106.55,29.57],
+        zoom: 7
+    });
+
+    map.setFeatures(['road','point'])//多个种类要素显示
+    //测量距离
+    map.plugin(["AMap.MouseTool"],function(){
+        var mousetool = new AMap.MouseTool(map);
+        mousetool.rule(); //使用鼠标工具，在地图上画标记点
+        mousetool.measureArea(); //使用鼠标工具，测量面积
+    });
+
+    if (!isSupportCanvas()) {
+        alert('热力图仅对支持canvas的浏览器适用,您所使用的浏览器不能使用热力图功能,请换个浏览器试试~')
+    }
+
+    //详细的参数,可以查看heatmap.js的文档 http://www.patrick-wied.at/static/heatmapjs/docs.html
+    //参数说明如下:
+    /* visible 热力图是否显示,默认为true
+     * opacity 热力图的透明度,分别对应heatmap.js的minOpacity和maxOpacity
+     * radius 势力图的每个点的半径大小
+     * gradient  {JSON} 热力图的渐变区间 . gradient如下所示
+     *	{
+     .2:'rgb(0, 255, 255)',
+     .5:'rgb(0, 110, 255)',
+     .8:'rgb(100, 0, 255)'
+     }
+     其中 key 表示插值的位置, 0-1
+     value 为颜色值
+     */
+
+    // 坐标点
+    //后端通过Thymeleaf向前端传入数据
+    var points = [[${data_json}]];
+    // console.log("ps is" + JSON.stringify(points));
+
+    var heatmap;
+    map.plugin(["AMap.Heatmap"], function () {
+        //初始化heatmap对象
+        heatmap = new AMap.Heatmap(map, {
+            radius: 25, //给定半径
+            opacity: [0, 0.8]
+            /*,
+            gradient:{
+                0.5: 'blue',
+                0.65: 'rgb(117,211,248)',
+                0.7: 'rgb(0, 255, 0)',
+                0.9: '#ffea00',
+                1.0: 'red'
+            }
+             */
+        });
+        // 设置数据集：该数据为北京部分“公园”数据
+        heatmap.setDataSet({
+            data: points,
+            max: 100
+        });
+
+        //工具条
+        AMap.plugin(['AMap.ToolBar'],function(){//异步同时加载多个插件
+            var toolbar = new AMap.ToolBar();
+            map.addControl(toolbar);
+
+        });
+    });
+
+    //判断浏览区是否支持canvas
+    function isSupportCanvas() {
+        var elem = document.createElement('canvas');
+        return !!(elem.getContext && elem.getContext('2d'));
+    }
+</script>
+</body>
+</html>
